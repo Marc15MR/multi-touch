@@ -1,43 +1,60 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multi-Touch Geometric Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Multi-Touch Geometric Tool Fullscreen</title>
   <style>
-    body, html {
+    /* Reset margins and paddings */
+    html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: hidden; /* Prevent scrollbars */
+      width: 100vw;
+      height: 100vh;
       background: black;
       color: white;
       font-family: monospace;
+      -webkit-user-select: none; /* Disable text selection */
+      -webkit-touch-callout: none; /* Disable callouts on iOS */
+      touch-action: none; /* Disable default touch behavior */
     }
     canvas {
-      position: absolute;
+      display: block; /* Remove inline gap */
+      position: fixed; /* Fix canvas to viewport */
       top: 0;
       left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: black;
     }
   </style>
 </head>
 <body>
-  <canvas id="touchCanvas"></canvas>  <script>
+  <canvas id="touchCanvas"></canvas>
+
+  <script>
     const canvas = document.getElementById('touchCanvas');
     const ctx = canvas.getContext('2d');
-    resizeCanvas();
+
+    function resizeCanvas() {
+      // Set actual canvas pixel size to match screen resolution for sharpness
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
+      // Scale context to account for device pixel ratio
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      draw();
+    }
 
     window.addEventListener('resize', resizeCanvas);
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
     const touches = new Map();
 
-    canvas.addEventListener('touchstart', updateTouches);
-    canvas.addEventListener('touchmove', updateTouches);
-    canvas.addEventListener('touchend', removeTouches);
-    canvas.addEventListener('touchcancel', removeTouches);
+    canvas.addEventListener('touchstart', updateTouches, { passive: false });
+    canvas.addEventListener('touchmove', updateTouches, { passive: false });
+    canvas.addEventListener('touchend', removeTouches, { passive: false });
+    canvas.addEventListener('touchcancel', removeTouches, { passive: false });
 
     function updateTouches(e) {
       e.preventDefault();
@@ -60,7 +77,6 @@
 
       const points = Array.from(touches.values());
 
-      // Draw circles for each touch
       points.forEach((point, index) => {
         ctx.beginPath();
         ctx.arc(point.x, point.y, 40, 0, Math.PI * 2);
@@ -73,17 +89,15 @@
         ctx.fillText(`#${index + 1}`, point.x - 10, point.y + 5);
       });
 
-      // Draw lines and calculations between each point
-      for (let i = 0; i < points.length; i++) {
-        for (let j = i + 1; j < points.length; j++) {
-          const p1 = points[i];
-          const p2 = points[j];
+      if (points.length > 1) {
+        if (points.length === 2) {
+          const p1 = points[0];
+          const p2 = points[1];
           const dx = p2.x - p1.x;
           const dy = p2.y - p1.y;
           const dist = Math.hypot(dx, dy);
           const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-          // Line
           ctx.beginPath();
           ctx.moveTo(p1.x, p1.y);
           ctx.lineTo(p2.x, p2.y);
@@ -91,217 +105,53 @@
           ctx.strokeStyle = 'white';
           ctx.stroke();
 
-          // Distance and Angle
           const midX = (p1.x + p2.x) / 2;
           const midY = (p1.y + p2.y) / 2;
           ctx.fillStyle = 'white';
           ctx.fillText(`${Math.round(dist)}px / ${Math.round(angle)}°`, midX + 5, midY - 5);
+
+        } else {
+          const centroid = points.reduce((acc, p) => {
+            acc.x += p.x;
+            acc.y += p.y;
+            return acc;
+          }, { x: 0, y: 0 });
+          centroid.x /= points.length;
+          centroid.y /= points.length;
+
+          const sortedPoints = points.slice().sort((a, b) => {
+            const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x);
+            const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x);
+            return angleA - angleB;
+          });
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'white';
+          ctx.fillStyle = 'white';
+
+          for (let i = 0; i < sortedPoints.length; i++) {
+            const p1 = sortedPoints[i];
+            const p2 = sortedPoints[(i + 1) % sortedPoints.length];
+
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+
+            ctx.fillText(`${Math.round(dist)}px / ${Math.round(angle)}°`, midX + 5, midY - 5);
+          }
         }
       }
     }
-  </script></body>
-</html><!DOCTYPE html><html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multi-Touch Geometric Tool</title>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: black;
-      color: white;
-      font-family: monospace;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="touchCanvas"></canvas>  <script>
-    const canvas = document.getElementById('touchCanvas');
-    const ctx = canvas.getContext('2d');
+
     resizeCanvas();
-
-    window.addEventListener('resize', resizeCanvas);
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
-    const touches = new Map();
-
-    canvas.addEventListener('touchstart', updateTouches);
-    canvas.addEventListener('touchmove', updateTouches);
-    canvas.addEventListener('touchend', removeTouches);
-    canvas.addEventListener('touchcancel', removeTouches);
-
-    function updateTouches(e) {
-      e.preventDefault();
-      for (const touch of e.touches) {
-        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-      }
-      draw();
-    }
-
-    function removeTouches(e) {
-      e.preventDefault();
-      for (const touch of e.changedTouches) {
-        touches.delete(touch.identifier);
-      }
-      draw();
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const points = Array.from(touches.values());
-
-      // Draw circles for each touch
-      points.forEach((point, index) => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 40, 0, Math.PI * 2);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.fillText(`#${index + 1}`, point.x - 10, point.y + 5);
-      });
-
-      // Draw lines and calculations between each point
-      for (let i = 0; i < points.length; i++) {
-        for (let j = i + 1; j < points.length; j++) {
-          const p1 = points[i];
-          const p2 = points[j];
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const dist = Math.hypot(dx, dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-          // Line
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = 'white';
-          ctx.stroke();
-
-          // Distance and Angle
-          const midX = (p1.x + p2.x) / 2;
-          const midY = (p1.y + p2.y) / 2;
-          ctx.fillStyle = 'white';
-          ctx.fillText(`${Math.round(dist)}px / ${Math.round(angle)}°`, midX + 5, midY - 5);
-        }
-      }
-    }
-  </script></body>
-</html><!DOCTYPE html><html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multi-Touch Geometric Tool</title>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: black;
-      color: white;
-      font-family: monospace;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="touchCanvas"></canvas>  <script>
-    const canvas = document.getElementById('touchCanvas');
-    const ctx = canvas.getContext('2d');
-    resizeCanvas();
-
-    window.addEventListener('resize', resizeCanvas);
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
-    const touches = new Map();
-
-    canvas.addEventListener('touchstart', updateTouches);
-    canvas.addEventListener('touchmove', updateTouches);
-    canvas.addEventListener('touchend', removeTouches);
-    canvas.addEventListener('touchcancel', removeTouches);
-
-    function updateTouches(e) {
-      e.preventDefault();
-      for (const touch of e.touches) {
-        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-      }
-      draw();
-    }
-
-    function removeTouches(e) {
-      e.preventDefault();
-      for (const touch of e.changedTouches) {
-        touches.delete(touch.identifier);
-      }
-      draw();
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const points = Array.from(touches.values());
-
-      // Draw circles for each touch
-      points.forEach((point, index) => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 40, 0, Math.PI * 2);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.fillText(`#${index + 1}`, point.x - 10, point.y + 5);
-      });
-
-      // Draw lines and calculations between each point
-      for (let i = 0; i < points.length; i++) {
-        for (let j = i + 1; j < points.length; j++) {
-          const p1 = points[i];
-          const p2 = points[j];
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const dist = Math.hypot(dx, dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-          // Line
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = 'white';
-          ctx.stroke();
-
-          // Distance and Angle
-          const midX = (p1.x + p2.x) / 2;
-          const midY = (p1.y + p2.y) / 2;
-          ctx.fillStyle = 'white';
-          ctx.fillText(`${Math.round(dist)}px / ${Math.round(angle)}°`, midX + 5, midY - 5);
-        }
-      }
-    }
-  </script></body>
+  </script>
+</body>
 </html>
